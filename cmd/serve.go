@@ -1,11 +1,12 @@
 package cmd
 
 import (
-	"fmt"
-	"github.com/atadzan/gin-blog/config"
+	"github.com/atadzan/gin-blog/pkg/config"
+	"github.com/atadzan/gin-blog/pkg/routing"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"log"
 	"net/http"
 )
 
@@ -19,36 +20,25 @@ var serveCmd = &cobra.Command{
 }
 
 func serve() {
-	configs := configSet()
+	// Added show logged line flag
+	log.SetFlags(log.LstdFlags | log.Llongfile)
 
-	r := gin.Default()
-	r.GET("/ping", func(ctx *gin.Context) {
+	// Set configuration from config.yml file
+	config.Set()
+
+	// Initializing router
+	routing.Init()
+
+	// Get router
+	router := routing.GetRouter()
+
+	router.GET("/ping", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{
 			"message":  "pong",
 			"app name": viper.GetString("App.Name"),
 		})
 	})
-	r.Run(fmt.Sprintf("%s:%s", configs.Server.Host, configs.Server.Port))
-}
-
-func configSet() config.Config {
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath("config")
-
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			// config file not found; ignore error if desired
-		} else {
-			// config file was found but another error was produced
-		}
-	}
-	var configs config.Config
-	err := viper.Unmarshal(&configs)
-	if err != nil {
-		fmt.Printf("unable to decode into struct. %v", err)
-	}
-	return configs
+	routing.Serve()
 }
 
 func init() {
